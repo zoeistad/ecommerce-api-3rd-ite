@@ -1,6 +1,7 @@
 file:
   client-path: /file
   storage-location: /Users/chanchhaya/Pictures/ite-file/
+  base-uri: http://localhost:${server.port}${file.client-path}/
 
 spring:
   jpa:
