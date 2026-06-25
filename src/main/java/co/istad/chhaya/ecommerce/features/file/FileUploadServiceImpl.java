@@ -3,6 +3,9 @@ package co.istad.chhaya.ecommerce.features.file;
 import co.istad.chhaya.ecommerce.features.file.dto.FileUploadResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -22,12 +25,30 @@ import java.util.stream.Collectors;
 public class FileUploadServiceImpl implements FileUploadService {
 
     private final FileUploadRepository fileUploadRepository;
+    private final FileUploadMapper fileUploadMapper;
 
     @Value("${file.storage-location}")
     private String storageLocation;
 
-    @Value("${file.base-uri}")
-    private String baseUri;
+
+    @Override
+    public FileUploadResponse findByName(String name) {
+        return fileUploadRepository.findByName(name)
+                .map(fileUploadMapper::mapFileUploadToFileUploadResponse)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "File has not been found"));
+    }
+
+
+    @Override
+    public Page<FileUploadResponse> findAll(int pageNumber, int pageSize) {
+        Sort sortById = Sort.by(Sort.Direction.DESC, "id");
+        PageRequest pageRequest = PageRequest.of(pageNumber, pageSize, sortById);
+
+        Page<FileUpload> fileUploadResponses = fileUploadRepository.findAll(pageRequest);
+
+        return fileUploadResponses.map(fileUploadMapper::mapFileUploadToFileUploadResponse);
+    }
+
 
     @Override
     public List<FileUploadResponse> uploadMultiple(List<MultipartFile> files) {
@@ -71,13 +92,7 @@ public class FileUploadServiceImpl implements FileUploadService {
         fileUpload.setMediaType(file.getContentType());
         fileUploadRepository.save(fileUpload);
 
-        return FileUploadResponse.builder()
-                .name(fileUpload.getName())
-                .extension(fileUpload.getExtension())
-                .size(fileUpload.getSize())
-                .mediaType(fileUpload.getMediaType())
-                .uri(baseUri + fileUpload.getName() + "." + fileUpload.getExtension())
-                .build();
+        return fileUploadMapper.mapFileUploadToFileUploadResponse(fileUpload);
     }
 
 
